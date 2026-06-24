@@ -34,6 +34,18 @@ parser.add_argument(
     help="Use the pre-trained checkpoint from Nucleus.",
 )
 parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
+parser.add_argument(
+    "--visualize_body",
+    type=str,
+    default=None,
+    help="Optional robot body name to visualize with a sphere marker during playback.",
+)
+parser.add_argument(
+    "--visualize_body_radius",
+    type=float,
+    default=0.025,
+    help="Radius of the playback body marker sphere.",
+)
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -67,6 +79,7 @@ from isaaclab.envs import (
     ManagerBasedRLEnvCfg,
     multi_agent_to_single_agent,
 )
+from isaaclab.markers import SPHERE_MARKER_CFG, VisualizationMarkers
 from isaaclab.utils.assets import retrieve_file_path
 from isaaclab.utils.dict import print_dict
 
@@ -117,10 +130,27 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+    scene_env = env.unwrapped
 
     # convert to single-agent instance if required by the RL algorithm
     if isinstance(env.unwrapped, DirectMARLEnv):
         env = multi_agent_to_single_agent(env)
+
+    body_marker = None
+    body_marker_idx = None
+    if args_cli.visualize_body is not None:
+        robot = scene_env.scene["robot"]
+        if args_cli.visualize_body not in robot.data.body_names:
+            raise ValueError(
+                f"Body '{args_cli.visualize_body}' not found on robot. Available bodies: {robot.data.body_names}"
+            )
+        body_marker_idx = robot.data.body_names.index(args_cli.visualize_body)
+        marker_cfg = SPHERE_MARKER_CFG.copy()
+        marker_cfg.prim_path = "/Visuals/Playback/body_marker"
+        marker_cfg.markers["sphere"].radius = args_cli.visualize_body_radius
+        marker_cfg.markers["sphere"].visual_material.diffuse_color = (0.0, 0.85, 1.0)
+        body_marker = VisualizationMarkers(marker_cfg)
+        body_marker.visualize(translations=robot.data.body_pos_w[:, body_marker_idx])
 
     # wrap for video recording
     if args_cli.video:
@@ -188,6 +218,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             obs, _, dones, _ = env.step(actions)
             # reset recurrent states for episodes that have terminated
             policy_nn.reset(dones)
+            if body_marker is not None and body_marker_idx is not None:
+                body_marker.visualize(translations=scene_env.scene["robot"].data.body_pos_w[:, body_marker_idx])
         if args_cli.video:
             timestep += 1
             # Exit the play loop after recording one video

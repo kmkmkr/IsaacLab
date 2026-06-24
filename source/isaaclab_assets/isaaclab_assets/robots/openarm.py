@@ -27,9 +27,42 @@ Motor spec sheets:
 """
 
 import isaaclab.sim as sim_utils
-from isaaclab.actuators import ImplicitActuatorCfg
+from isaaclab.actuators import IdealPDActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
+
+OPENARM_BI_ARM_VELOCITY_LIMITS = {
+    "openarm_left_joint[1-2]": 2.175,
+    "openarm_right_joint[1-2]": 2.175,
+    "openarm_left_joint[3-4]": 2.175,
+    "openarm_right_joint[3-4]": 2.175,
+    "openarm_left_joint[5-7]": 2.61,
+    "openarm_right_joint[5-7]": 2.61,
+}
+
+OPENARM_BI_ARM_EFFORT_LIMITS = {
+    "openarm_left_joint[1-2]": 40.0,
+    "openarm_right_joint[1-2]": 40.0,
+    "openarm_left_joint[3-4]": 27.0,
+    "openarm_right_joint[3-4]": 27.0,
+    "openarm_left_joint[5-7]": 7.0,
+    "openarm_right_joint[5-7]": 7.0,
+}
+
+OPENARM_UNI_ARM_VELOCITY_LIMITS = {
+    "openarm_joint[1-2]": 2.175,
+    "openarm_joint[3-4]": 2.175,
+    "openarm_joint[5-7]": 2.61,
+}
+
+OPENARM_UNI_ARM_EFFORT_LIMITS = {
+    "openarm_joint[1-2]": 40.0,
+    "openarm_joint[3-4]": 27.0,
+    "openarm_joint[5-7]": 7.0,
+}
+
+OPENARM_GRIPPER_VELOCITY_LIMIT = 0.2
+OPENARM_GRIPPER_EFFORT_LIMIT = 333.33
 
 OPENARM_BI_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
@@ -60,37 +93,28 @@ OPENARM_BI_CFG = ArticulationCfg(
     # DM-J4310-2EC V1.1 (Joint 5, 6, 7, 8):
     # https://files.seeedstudio.com/products/Damiao/DM-J4310-en.pdf
     actuators={
-        "openarm_arm": ImplicitActuatorCfg(
+        "openarm_arm": IdealPDActuatorCfg(
             joint_names_expr=[
                 "openarm_left_joint[1-7]",
                 "openarm_right_joint[1-7]",
             ],
-            velocity_limit_sim={
-                "openarm_left_joint[1-2]": 2.175,
-                "openarm_right_joint[1-2]": 2.175,
-                "openarm_left_joint[3-4]": 2.175,
-                "openarm_right_joint[3-4]": 2.175,
-                "openarm_left_joint[5-7]": 2.61,
-                "openarm_right_joint[5-7]": 2.61,
-            },
-            effort_limit_sim={
-                "openarm_left_joint[1-2]": 40.0,
-                "openarm_right_joint[1-2]": 40.0,
-                "openarm_left_joint[3-4]": 27.0,
-                "openarm_right_joint[3-4]": 27.0,
-                "openarm_left_joint[5-7]": 7.0,
-                "openarm_right_joint[5-7]": 7.0,
-            },
+            velocity_limit=OPENARM_BI_ARM_VELOCITY_LIMITS,
+            velocity_limit_sim=OPENARM_BI_ARM_VELOCITY_LIMITS,
+            effort_limit=OPENARM_BI_ARM_EFFORT_LIMITS,
+            effort_limit_sim=OPENARM_BI_ARM_EFFORT_LIMITS,
             stiffness=80.0,
             damping=4.0,
+            armature=0.01,
         ),
-        "openarm_gripper": ImplicitActuatorCfg(
+        "openarm_gripper": IdealPDActuatorCfg(
             joint_names_expr=[
                 "openarm_left_finger_joint.*",
                 "openarm_right_finger_joint.*",
             ],
-            velocity_limit_sim=0.2,
-            effort_limit_sim=333.33,
+            velocity_limit=OPENARM_GRIPPER_VELOCITY_LIMIT,
+            velocity_limit_sim=OPENARM_GRIPPER_VELOCITY_LIMIT,
+            effort_limit=OPENARM_GRIPPER_EFFORT_LIMIT,
+            effort_limit_sim=OPENARM_GRIPPER_EFFORT_LIMIT,
             stiffness=2e3,
             damping=1e2,
         ),
@@ -125,25 +149,22 @@ OPENARM_UNI_CFG = ArticulationCfg(
         },
     ),
     actuators={
-        "openarm_arm": ImplicitActuatorCfg(
+        "openarm_arm": IdealPDActuatorCfg(
             joint_names_expr=["openarm_joint[1-7]"],
-            velocity_limit_sim={
-                "openarm_joint[1-2]": 2.175,
-                "openarm_joint[3-4]": 2.175,
-                "openarm_joint[5-7]": 2.61,
-            },
-            effort_limit_sim={
-                "openarm_joint[1-2]": 40.0,
-                "openarm_joint[3-4]": 27.0,
-                "openarm_joint[5-7]": 7.0,
-            },
+            velocity_limit=OPENARM_UNI_ARM_VELOCITY_LIMITS,
+            velocity_limit_sim=OPENARM_UNI_ARM_VELOCITY_LIMITS,
+            effort_limit=OPENARM_UNI_ARM_EFFORT_LIMITS,
+            effort_limit_sim=OPENARM_UNI_ARM_EFFORT_LIMITS,
             stiffness=80.0,
             damping=4.0,
+            armature=0.01,
         ),
-        "openarm_gripper": ImplicitActuatorCfg(
+        "openarm_gripper": IdealPDActuatorCfg(
             joint_names_expr=["openarm_finger_joint.*"],
-            velocity_limit_sim=0.2,
-            effort_limit_sim=333.33,
+            velocity_limit=OPENARM_GRIPPER_VELOCITY_LIMIT,
+            velocity_limit_sim=OPENARM_GRIPPER_VELOCITY_LIMIT,
+            effort_limit=OPENARM_GRIPPER_EFFORT_LIMIT,
+            effort_limit_sim=OPENARM_GRIPPER_EFFORT_LIMIT,
             stiffness=2e3,
             damping=1e2,
         ),
