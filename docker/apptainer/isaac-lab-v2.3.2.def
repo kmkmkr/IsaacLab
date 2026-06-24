@@ -1,0 +1,105 @@
+Bootstrap: docker
+From: nvcr.io/nvidia/isaac-sim:5.1.0
+
+%labels
+    Maintainer Isaac Lab Project
+    IsaacLabVersion 2.3.2
+    IsaacSimVersion 5.1.0
+    Description Isaac Lab 2.3.2 base runtime for Apptainer with Isaac Sim baked in and Python dependencies left to a host-side uv environment.
+
+%help
+    This image contains the Isaac Sim 5.1.0 runtime and the Isaac Lab 2.3.2 source tree.
+    Python dependencies for Isaac Lab are intentionally not installed into the container.
+
+    Intended workflow:
+      1. Use this image with --nv and bind-mount your working tree / caches.
+      2. Create and manage the Python environment on the host with uv.
+      3. Bind the host environment into the container for execution.
+
+%files
+    apps /workspace/isaaclab/apps
+    docs /workspace/isaaclab/docs
+    scripts /workspace/isaaclab/scripts
+    source /workspace/isaaclab/source
+    tools /workspace/isaaclab/tools
+    CONTRIBUTORS.md /workspace/isaaclab/CONTRIBUTORS.md
+    CONTRIBUTING.md /workspace/isaaclab/CONTRIBUTING.md
+    LICENSE /workspace/isaaclab/LICENSE
+    LICENSE-mimic /workspace/isaaclab/LICENSE-mimic
+    README.md /workspace/isaaclab/README.md
+    VERSION /workspace/isaaclab/VERSION
+    isaaclab.sh /workspace/isaaclab/isaaclab.sh
+    pyproject.toml /workspace/isaaclab/pyproject.toml
+
+%post
+    set -eux
+
+    export DEBIAN_FRONTEND=noninteractive
+
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        cmake \
+        git \
+        libglib2.0-0 \
+        ncurses-bin \
+        ncurses-term \
+        rsync \
+        wget
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+
+    chmod +x /workspace/isaaclab/isaaclab.sh
+    ln -sfn /isaac-sim /workspace/isaaclab/_isaac_sim
+
+    mkdir -p \
+        /workspace/isaaclab/data_storage \
+        /workspace/isaaclab/docs/_build \
+        /workspace/isaaclab/logs \
+        /isaac-sim/kit/cache \
+        /root/.cache/nvidia/GLCache \
+        /root/.cache/ov \
+        /root/.cache/pip \
+        /root/.local/share/ov/data \
+        /root/.nv/ComputeCache \
+        /root/.nvidia-omniverse/logs \
+        /root/Documents \
+        /var/run/nvidia-persistenced
+
+    touch /bin/nvidia-smi
+    touch /bin/nvidia-debugdump
+    touch /bin/nvidia-persistenced
+    touch /bin/nvidia-cuda-mps-control
+    touch /bin/nvidia-cuda-mps-server
+    touch /etc/localtime
+    touch /var/run/nvidia-persistenced/socket
+
+    cat >> /root/.bashrc <<'EOF'
+export ISAACLAB_PATH=/workspace/isaaclab
+export ISAACSIM_PATH=/isaac-sim
+export OMNI_KIT_ALLOW_ROOT=1
+alias isaaclab=/workspace/isaaclab/isaaclab.sh
+alias python=/isaac-sim/python.sh
+alias python3=/isaac-sim/python.sh
+EOF
+
+%environment
+    export ACCEPT_EULA=Y
+    export ISAACLAB_PATH=/workspace/isaaclab
+    export ISAACSIM_PATH=/isaac-sim
+    export OMNI_KIT_ALLOW_ROOT=1
+    export LANG=C.UTF-8
+    export LC_ALL=C.UTF-8
+
+%runscript
+    if [ "$#" -eq 0 ]; then
+        exec /bin/bash
+    fi
+    exec "$@"
+
+%test
+    set -eux
+    test -x /isaac-sim/python.sh
+    test -x /workspace/isaaclab/isaaclab.sh
+    test -L /workspace/isaaclab/_isaac_sim
